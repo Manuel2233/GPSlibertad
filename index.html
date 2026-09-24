@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ronda Vigilancia - Hipermercado Libertad</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #f4f4f4; }
+  h1 { color: #222; font-size: 22px; }
+  h2 { color: #222; font-size: 18px; margin-top: 25px; }
+  .container { max-width: 1200px; margin: auto; }
+  .croquis { position: relative; background: #fff; border: 2px solid #333; overflow: hidden; }
+  .croquis img { width: 100%; display: block; }
+  .punto {
+    position: absolute;
+    background: #00b300;
+    color: white;
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: bold;
+    box-shadow: 0 0 0 3px rgba(0,179,0,0.35);
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+  }
+  .punto:hover { background: #007a00; }
+  .punto.puerta { background: #444; box-shadow: 0 0 0 3px rgba(0,0,0,0.25); }
+  .qr-box { background: #fff; padding: 20px; margin-top: 20px; border-radius: 8px; }
+  #reader { width: 100%; max-width: 400px; margin: auto; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; font-size: 14px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background: #222; color: #fff; }
+  button { padding: 10px 18px; background: #00b300; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px 5px 5px 0; }
+  button:hover { background: #007a00; }
+  button.rojo { background: #c00; }
+  button.rojo:hover { background: #900; }
+  .qr-item { display: inline-block; text-align: center; margin: 8px; padding: 12px; border: 1px solid #ccc; background: #fff; border-radius: 8px; }
+  .qr-item canvas { display: block; margin: auto; }
+  .qr-item p { margin: 6px 0 0; font-size: 12px; font-weight: bold; }
+  .qr-item small { color: #666; font-size: 10px; }
+  input[type=text] { padding: 10px; font-size: 16px; width: 100%; max-width: 300px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; }
+  .aviso { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 10px 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🔒 Ronda de Vigilancia — Hipermercado Libertad</h1>
+  <div class="aviso">
+    <strong>Instrucciones:</strong> Ingresá tu nombre, luego escaneá el QR de cada punto al pasar. Cada escaneo queda registrado con hora y ubicación.
+  </div>
+
+  <!-- IDENTIFICACIÓN DEL VIGILADOR -->
+  <label for="vigilador"><strong>👤 Nombre del vigilador:</strong></label><br>
+  <input type="text" id="vigilador" placeholder="Ej: Juan Pérez" onchange="guardarVigilador()">
+
+  <!-- CROQUIS -->
+  <h2>🗺️ Croquis de puntos de control</h2>
+  <div class="croquis">
+    <!-- REEMPLAZAR por la imagen del croquis: -->
+    <img src="croquis.png" alt="Croquis Hipermercado Libertad">
+
+    <!-- PUNTOS SOBRE EL CROQUIS (ajustá left/top según tu imagen) -->
+    <!-- Salidas de emergencia (verde) -->
+    <div class="punto" style="left:5%;  top:6%;"  title="Puerta Exterior">1</div>
+    <div class="punto" style="left:22%; top:4%;"  title="Puerta & Portón 6">2</div>
+    <div class="punto" style="left:52%; top:3%;"  title="Puerta 9">3</div>
+    <div class="punto" style="left:85%; top:2%;"  title="Puerta GYM 3">4</div>
+    <div class="punto" style="left:92%; top:17%;" title="Puerta GYM 2">5</div>
+    <div class="punto" style="left:75%; top:27%;" title="Puerta GYM 1">6</div>
+    <div class="punto" style="left:52%; top:22%;" title="Entrada Secos">7</div>
+    <div class="punto" style="left:1%;  top:52%;" title="Salida C">8</div>
+    <div class="punto" style="left:6%;  top:80%;" title="Salida MGC">9</div>
+    <div class="punto" style="left:40%; top:95%;" title="Ingreso">10</div>
+
+    <!-- Puertas comunes (negro) -->
+    <div class="punto puerta" style="left:35%; top:22%;" title="Portón A">11</div>
+    <div class="punto puerta" style="left:20%; top:16%;" title="Entrada Carne">12</div>
+    <div class="punto puerta" style="left:38%; top:91%;" title="Recepción">13</div>
+  </div>
+
+  <!-- ESCÁNER QR -->
+  <div class="qr-box">
+    <h2>📷 Escanear QR</h2>
+    <div id="reader"></div>
+    <p id="resultado" style="font-weight:bold; color:#007a00; text-align:center;"></p>
+    <div style="text-align:center;">
+      <button onclick="descargarCSV()">⬇️ Descargar registro (CSV)</button>
+      <button class="rojo" onclick="limpiarRegistro()">🗑️ Limpiar registro</button>
+    </div>
+  </div>
+
+  <!-- REGISTRO -->
+  <h2>📋 Registro de rondas</h2>
+  <table id="tabla">
+    <thead>
+      <tr><th>#</th><th>Punto</th><th>Tipo</th><th>Vigilador</th><th>Fecha y hora</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+</div>
+
+<!-- ====== QR IMPRIMIBLES ====== -->
+<div class="container qr-box">
+  <h2>🖨️ QR para imprimir y pegar en cada punto</h2>
+  <p>Imprimí esta hoja, recortá cada QR y pegalo en su puerta/salida correspondiente.</p>
+  <div id="qrs"></div>
+</div>
+
+<script>
+// ================== CONFIGURACIÓN DE PUNTOS ==================
+const PUNTOS = {
+  "SALIDA-01": { nombre: "Puerta Exterior",    tipo: "Salida emergencia" },
+  "SALIDA-02": { nombre: "Puerta & Portón 6",  tipo: "Salida emergencia" },
+  "SALIDA-03": { nombre: "Puerta 9",           tipo: "Salida emergencia" },
+  "SALIDA-04": { nombre: "Puerta GYM 3",       tipo: "Salida emergencia" },
+  "SALIDA-05": { nombre: "Puerta GYM 2",       tipo: "Salida emergencia" },
+  "SALIDA-06": { nombre: "Puerta GYM 1",       tipo: "Salida emergencia" },
+  "SALIDA-07": { nombre: "Entrada Secos",      tipo: "Salida emergencia" },
+  "SALIDA-08": { nombre: "Salida C",           tipo: "Salida emergencia" },
+  "SALIDA-09": { nombre: "Salida MGC",         tipo: "Salida emergencia" },
+  "SALIDA-10": { nombre: "Ingreso",            tipo: "Puerta común" },
+  "PUERTA-11": { nombre: "Portón A",           tipo: "Puerta común" },
+  "PUERTA-12": { nombre: "Entrada Carne",      tipo: "Puerta común" },
+  "PUERTA-13": { nombre: "Recepción",          tipo: "Puerta común" }
+};
+
+// ================== VIGILADOR ==================
+function guardarVigilador() {
+  const v = document.getElementById("vigilador").value.trim();
+  if (v) localStorage.setItem("vigilador", v);
+}
+window.addEventListener("load", () => {
+  const v = localStorage.getItem("vigilador") || "";
+  document.getElementById("vigilador").value = v;
+});
+
+// ================== ESCÁNER QR ==================
+let ultimoEscaneo = "";
+let ultimoTiempo = 0;
+
+const html5QrCode = new Html5Qrcode("reader");
+html5QrCode.start(
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 250 },
+  (textoQR) => {
+    const codigo = textoQR.trim();
+    const ahora = Date.now();
+    // Evitar duplicados en menos de 5 segundos (mismo QR)
+    if (codigo === ultimoEscaneo && ahora - ultimoTiempo < 5000) return;
+    ultimoEscaneo = codigo;
+    ultimoTiempo = ahora;
+
+    const punto = PUNTOS[codigo];
+    if (punto) {
+      registrar(punto.nombre, punto.tipo);
+      document.getElementById("resultado").innerText = "✅ Registrado: " + punto.nombre;
+    } else {
+      document.getElementById("resultado").innerText = "⚠️ QR no reconocido: " + codigo;
+    }
+  },
+  (err) => { /* silencioso */ }
+);
+
+// ================== REGISTRO ==================
+function registrar(punto, tipo) {
+  const vigilador = localStorage.getItem("vigilador") || "Sin identificar";
+  const ahora = new Date().toLocaleString("es-AR");
+  const registro = JSON.parse(localStorage.getItem("rondas") || "[]");
+  registro.push({ punto, tipo, vigilador, hora: ahora });
+  localStorage.setItem("rondas", JSON.stringify(registro));
+  renderTabla();
+}
+
+function renderTabla() {
+  const registro = JSON.parse(localStorage.getItem("rondas") || "[]");
+  const tbody = document.querySelector("#tabla tbody");
+  tbody.innerHTML = "";
+  registro.forEach((r, i) => {
+    tbody.innerHTML += `<tr><td>${i+1}</td><td>${r.punto}</td><td>${r.tipo}</td><td>${r.vigilador}</td><td>${r.hora}</td></tr>`;
+  });
+}
+
+function descargarCSV() {
+  const registro = JSON.parse(localStorage.getItem("rondas") || "[]");
+  let csv = "N,Punto,Tipo,Vigilador,Fecha y hora\n";
+  registro.forEach((r, i) => {
+    csv += `${i+1},"${r.punto}","${r.tipo}","${r.vigilador}","${r.hora}"\n`;
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "rondas_libertad.csv";
+  a.click();
+}
+
+function limpiarRegistro() {
+  if (confirm("¿Borrar todo el registro?")) {
+    localStorage.removeItem("rondas");
+    renderTabla();
+  }
+}
+
+// ================== GENERADOR DE QR ==================
+const contenedorQR = document.getElementById("qrs");
+Object.keys(PUNTOS).forEach(codigo => {
+  const div = document.createElement("div");
+  div.className = "qr-item";
+  const canvas = document.createElement("canvas");
+  div.appendChild(canvas);
+  const p = document.createElement("p");
+  p.innerText = PUNTOS[codigo].nombre;
+  div.appendChild(p);
+  const s = document.createElement("small");
+  s.innerText = codigo;
+  div.appendChild(s);
+  contenedorQR.appendChild(div);
+  QRCode.toCanvas(canvas, codigo, { width: 150 }, err => { if (err) console.error(err); });
+});
+
+renderTabla();
+</script>
+</body>
+</html>
